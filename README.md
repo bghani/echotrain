@@ -8,8 +8,9 @@ one sigmoid per class). Optionally, a second head predicts the genus.
 ```
 train.py                  train a model from a config file
 evaluate.py               score a trained model on another split (e.g. test)
+configs/example_folders.yaml   example config for a dataset stored as species folders
+configs/example_manifest.yaml  example config for a dataset described by a manifest CSV
 configs/bats.yaml         the European bat setup (manifest dataset, species + genus)
-configs/folders_example.yaml  template for a dataset stored as species folders
 echotrain/                the training code
   options.py              every config option with its default value
   data.py                 reading folders / manifests, class list, genus mapping
@@ -60,7 +61,14 @@ bats). Clips that are longer are cropped and shorter ones are repeated
 so that nothing is thrown away. In evaluation, the chunks of one recording are
 max-pooled into a single prediction.
 
-There are two ways to describe a dataset. Both train the same way.
+There are two ways to describe a dataset, set with `data.mode`. Both train
+the same way; only the `data:` section of the config differs. Start from the
+matching example config:
+
+| `data.mode` | your data | example config |
+|---|---|---|
+| `folders` | one folder per species, separate `train/` and `val/` folders | `configs/example_folders.yaml` |
+| `manifest` | one CSV listing every file with its label and split | `configs/example_manifest.yaml` |
 
 ### Option A: species folders
 
@@ -73,7 +81,7 @@ val/Myotis_myotis/rec4.wav
 ```
 
 Folder names are the class names. Set `data.mode: folders`, `data.train_dir`
-and `data.val_dir` (see `configs/folders_example.yaml`). To cut the files into
+and `data.val_dir` (see `configs/example_folders.yaml`). To cut the files into
 chunks first:
 
 ```bash
@@ -87,7 +95,8 @@ can be used directly as `data.train_dir`.
 ### Option B: a manifest CSV
 
 One row per audio file with at least three columns: the file path, the label
-and the split (`train` / `val` / `test`). Column names are set in the config
+and the split (`train` / `val` / `test`). Set `data.mode: manifest`,
+`data.manifest` and `data.audio_root` (see `configs/example_manifest.yaml`). Column names are set in the config
 (`path_col`, `label_col`, `split_col`). Paths can be absolute or relative to
 `data.audio_root`. Labels may contain spaces ("Myotis myotis"); they are
 turned into `Myotis_myotis`.
@@ -132,9 +141,27 @@ be any higher rank, e.g. family.
 
 ## 3. Train
 
+Copy the example config for your data, change the paths, and train.
+
+**Folders mode** (`data.mode: folders`):
+
 ```bash
-uv run train.py --config configs/bats.yaml
+cp configs/example_folders.yaml configs/my_folders.yaml    # then set data.train_dir / data.val_dir
+uv run train.py --config configs/my_folders.yaml
+uv run evaluate.py --run runs/my_species_group --dir /path/to/test   # test set = another species-folder tree
 ```
+
+**Manifest mode** (`data.mode: manifest`):
+
+```bash
+cp configs/example_manifest.yaml configs/my_manifest.yaml  # then set data.manifest / data.audio_root / column names
+uv run train.py --config configs/my_manifest.yaml
+uv run evaluate.py --run runs/my_species_group --split test           # test set = the rows with split "test"
+```
+
+`my_species_group` is the `run_name` in the example configs; use your own.
+Complete real setups: `configs/bats.yaml` (manifest mode) and
+`configs/frogs.yaml` (folders mode).
 
 Change any option from the command line without editing the file:
 
@@ -145,7 +172,10 @@ uv run train.py --config configs/bats.yaml --set run_name=bats_lr3e-4 --set trai
 All options and their defaults are in `echotrain/options.py`, with a comment
 for each. A config file only needs the values that differ from the defaults.
 
-Each run writes to `runs/<run_name>/`:
+Each run writes to `runs/<run_name>/`. If that folder already holds a run, a new
+one is started next to it as `runs/<run_name>_<model>_<timestamp>/` (e.g.
+`frogs_passt_20261106-143012`); an existing run is never overwritten. Pass
+`--set run_name=...` for a readable name, or `--resume` to continue the old run.
 
 | file | contents |
 |---|---|
@@ -204,11 +234,29 @@ use the `tf_` versions. The old names `effnet_b3_chunked`, `effnet_b3` and
 uv run train.py --config configs/bats.yaml --set model.backbone=efficientnet_b0 --set run_name=bats_b0
 ```
 
-**PaSST.** `model.passt_arch` picks the pre-trained weights:
-`passt_20sec` (default, 20 s clips), `passt_30sec`, or
-`passt_s_kd_p16_128_ap486` (10 s clips). Pick the one closest to
-`audio.clip_seconds`. Other clip lengths also work: the time position
-encodings are cut or stretched to fit. PaSST uses its own spectrogram (the one
+**PaSST.** `model.passt_arch` picks the pre-trained AudioSet weights. PaSST
+checkpoints are trained on a fixed clip length:
+
+| `model.passt_arch` | pre-training clip length | chosen by `auto` when `audio.clip_seconds` is |
+|---|---|---|
+| `passt_s_kd_p16_128_ap486` | 10 s | 15 or less |
+| `passt_20sec` | 20 s | more than 15, up to 25 |
+| `passt_30sec` | 30 s | more than 25 |
+
+By default (`passt_arch: auto`) the checkpoint whose length is closest to
+`audio.clip_seconds` is used, and the run prints which one, e.g.
+`model.passt_arch=auto -> passt_s_kd_p16_128_ap486 (closest to clip_seconds=5)`.
+Other clip lengths work too: the time position encodings are cut or
+stretched to fit. To use a specific checkpoint, name it in the config or on
+the command line:
+
+```bash
+uv run train.py --config configs/frogs.yaml --set model.name=passt --set model.passt_arch=passt_20sec
+```
+
+Besides the three above, `PASST_ARCHS` in `echotrain/networks.py` lists a few
+more 10 s checkpoints (`passt_s_swa_p16_128_ap476`, `passt_l_kd_p16_128_ap47`,
+`openmic`, `fsd50k`); `auto` never picks these. PaSST uses its own spectrogram (the one
 it was pre-trained with: 128 mel bins, 10 ms hop, from `model.passt_fmin` to
 `model.passt_fmax`). Only `frontend.freqm` / `frontend.timem` (masking) apply
 from the `frontend:` section. The weights (about 350 MB) are downloaded on the

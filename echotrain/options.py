@@ -50,7 +50,7 @@ DEFAULTS = {
         "init_checkpoint": None, # warm start: load matching weights from an earlier run
         # passt / passt_single. PaSST has its own spectrogram frontend (the one it was
         # pre-trained with); of the frontend section only n_mels (keep 128), freqm and timem apply.
-        "passt_arch": "passt_20sec",  # passt_20sec, passt_30sec, passt_s_kd_p16_128_ap486 (10 s), ...
+        "passt_arch": "auto",   # auto = closest to audio.clip_seconds among the 10/20/30 s AudioSet models; or passt_20sec, passt_30sec, passt_s_kd_p16_128_ap486 (10 s), ...
         "passt_fmin": 100.0,
         "passt_fmax": None,      # None = sample_rate / 2 - 1000 Hz (the hear21passt default)
         "passt_patchout_t": 0,   # structured patchout: time patches dropped per clip in training

@@ -1,0 +1,56 @@
+# Example config for data.mode: folders -- one folder per species.
+#
+#   /path/to/train/Bufo_bufo/*.wav
+#   /path/to/train/Rana_temporaria/*.wav
+#   /path/to/val/Bufo_bufo/*.wav
+#   ...
+#
+# Folder names are the class names. Clips of any length and sample rate are
+# accepted: they are resampled to audio.sample_rate and cropped/tiled to
+# audio.clip_seconds. For long recordings, cut them into chunks first with
+# tools/prepare_chunks.py so that no audio is thrown away.
+#
+# Copy this file, change the paths, then:
+#   uv run train.py --config configs/my_folders.yaml
+# Every option and its default is listed in echotrain/options.py.
+
+run_name: my_species_group
+output_dir: runs
+device: cuda:0
+
+data:
+  mode: folders
+  train_dir: /path/to/train
+  val_dir: /path/to/val
+  # species_list: inputs/my_species.txt   # optional: only train on these classes (one name per line)
+
+audio:
+  sample_rate: 32000
+  clip_seconds: 5
+
+taxonomy:
+  genus_head: true         # genus = first word of the folder name; false for a species head only
+  # genus_map: inputs/my_species_genus_map.csv   # optional CSV with columns species,genus
+
+model:
+  name: effnet             # effnet, effnet_chunked, passt, ... (README section 4); *_single if genus_head: false
+  backbone: efficientnet_b3
+  # passt_arch: auto       # PaSST only: auto picks the checkpoint closest to clip_seconds
+
+augment:
+  mixup_rate: 0.1
+
+sampler:
+  balanced: true
+  noise_class: null        # set to the folder name of a background class (e.g. Noise), if you have one
+  noise_multiplier: 0.4
+
+train:
+  epochs: 100
+  batch_size: 32
+  num_workers: 8
+  early_stop_patience: 15
+
+eval:
+  batch_size: 16
+  num_workers: 8

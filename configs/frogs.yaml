@@ -1,0 +1,47 @@
+# European Frogs (FrogEcho setup): manifest dataset, species + genus heads.
+# Every option and its default is listed in echotrain/options.py.
+
+run_name: frogs_
+output_dir: runs
+device: cuda:0
+
+data:
+  mode: folders
+  train_dir: /data/burooj/models/frogecho/chunks/train
+  val_dir: /data/burooj/models/frogecho/chunks/val
+  species_list: /data/burooj/models/frogecho/inputs/list_FrogEcho_sp.csv   # optional: one name per line; restricts the classes
+
+
+audio:
+  sample_rate: 32000
+  clip_seconds: 5
+
+taxonomy:
+  genus_head: true
+  #genus_map: inputs/bats/species_genus_map.csv
+
+model:
+  name: effnet            # see README for the other choices
+  backbone: efficientnet_b3       # any timm EfficientNet (efficientnet_b0 ... b5, tf_efficientnet_b0 ... b8)
+
+augment:
+  mixup_rate: 0.1
+
+sampler:
+  balanced: true
+  cap: 1000
+  power: 0.5
+  noise_class: null        # no noise class; set to its folder name (e.g. Noise) to down-weight it
+  noise_multiplier: 0.4
+
+train:
+  epochs: 100
+  batch_size: 32
+  num_workers: 16
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  early_stop_patience: 15
+
+eval:
+  batch_size: 16
+  num_workers: 16

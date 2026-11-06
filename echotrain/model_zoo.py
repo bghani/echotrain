@@ -72,11 +72,21 @@ def _single(m, cfg, n_species, n_genus):
     return networks.EffNetSingle(name, n_species, _frontend(cfg), pretrained=pretrained)
 
 
+# passt_arch: auto chooses among these (pre-training clip length in seconds)
+PASST_AUTO = {"passt_s_kd_p16_128_ap486": 10, "passt_20sec": 20, "passt_30sec": 30}
+
+
 def _passt(m, cfg, n_species, n_genus):
     mc, f = cfg["model"], cfg["frontend"]
     mel = PasstFrontend(sr=cfg["audio"]["sample_rate"], n_mels=f["n_mels"], fmin=mc["passt_fmin"],
                         fmax=mc["passt_fmax"], freqm=f["freqm"], timem=f["timem"])
-    return networks.Passt(mc["passt_arch"], n_species, n_genus, mel, pretrained=mc["pretrained"],
+    arch = mc["passt_arch"]
+    if arch == "auto":
+        # AudioSet checkpoint whose pre-training clip length is closest to ours
+        clip = cfg["audio"]["clip_seconds"]
+        arch = min(PASST_AUTO, key=lambda a: abs(PASST_AUTO[a] - clip))
+        print(f"model.passt_arch=auto -> {arch} (closest to clip_seconds={clip})")
+    return networks.Passt(arch, n_species, n_genus, mel, pretrained=mc["pretrained"],
                           s_patchout_t=mc["passt_patchout_t"], s_patchout_f=mc["passt_patchout_f"])
 
 

@@ -77,7 +77,15 @@ def main():
         cfg = load_config(args.config, args.set)
         run_dir = Path(cfg["output_dir"]) / cfg["run_name"]
         if (run_dir / "last.pt").exists():
-            raise SystemExit(f"{run_dir} already holds a run. Pick another run_name, or use --resume {run_dir}/last.pt")
+            # Never overwrite a finished/stopped run: start a new one next to it,
+            # named <run_name>_<model>_<timestamp>. To continue the old one, use --resume.
+            m = cfg["model"]
+            model_tag = m["backbone"] if m["name"].startswith("effnet") else m["name"]
+            new_name = f"{cfg['run_name'].rstrip('_-')}_{model_tag}_{time.strftime('%Y%m%d-%H%M%S')}"
+            print(f"{run_dir} already holds a run (continue it with --resume {run_dir}/last.pt).\n"
+                  f"Starting a new run instead: {new_name}")
+            cfg["run_name"] = new_name
+            run_dir = Path(cfg["output_dir"]) / new_name
     else:
         p.error("give --config or --resume")
 
