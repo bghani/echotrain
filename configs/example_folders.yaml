@@ -7,7 +7,7 @@
 #   /path/to/val/Bufo_bufo/*.wav
 #   ...
 #
-# Folder names are the class names. Clips of any length and sample rate are
+# Folder names are the class names. Files of any length and sample rate are
 # accepted: they are resampled to audio.sample_rate and cropped/tiled to
 # audio.clip_seconds. For long recordings, cut them into chunks first with
 # tools/prepare_chunks.py so that no audio is thrown away.

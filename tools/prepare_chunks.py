@@ -1,8 +1,8 @@
 """Cut recordings into fixed-length chunks and write a chunk manifest.
 
 Each recording is resampled to --target-sr and split into chunks of
---chunk-seconds. A trailing piece of at least --min-chunk-seconds is tiled up
-to full length; shorter tails are dropped. A recording shorter than one chunk
+--chunk-seconds. A leftover at the end of at least --min-chunk-seconds is tiled up
+to full length; shorter leftovers are dropped. A recording shorter than one chunk
 is always tiled, so every recording yields at least one chunk.
 
 Input is either a manifest CSV (one row per recording) or a folder with one

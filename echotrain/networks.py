@@ -32,7 +32,7 @@ def check_efficientnet(name, pretrained):
 
 
 class EffNet(nn.Module):
-    """EfficientNet on the whole clip, single-channel input. Species head, optional genus head."""
+    """EfficientNet, single-channel input. Species head, optional genus head."""
 
     def __init__(self, backbone, num_species, num_genus, mel, pretrained=True):
         super().__init__()
@@ -86,10 +86,10 @@ def _passt_module():
 
 
 class Passt(nn.Module):
-    """PaSST transformer (legacy/hear21passt) on the whole clip. Species head, optional genus head.
+    """PaSST transformer (legacy/hear21passt). Species head, optional genus head.
 
     The species head is PaSST's own head (net.head); the genus head is a
-    LayerNorm + Linear on the same 768-d clip embedding. Parameters are named
+    LayerNorm + Linear on the same 768-d chunk embedding. Parameters are named
     like the old PasstBasicWrapper (net.*), so old batecho/insectaecho PaSST
     checkpoints can be used as model.init_checkpoint.
     """
@@ -110,7 +110,7 @@ class Passt(nn.Module):
 
     def forward(self, x):
         spec = self.mel(x).unsqueeze(1)  # (batch, 1, n_mels, time)
-        with warnings.catch_warnings():  # clip length differs from the pretraining length: expected, handled
+        with warnings.catch_warnings():  # chunk length differs from the pretraining length: expected, handled
             warnings.filterwarnings("ignore", message="Input image size")
             logits, emb = self.net(spec)
         if self.genus_head is None:

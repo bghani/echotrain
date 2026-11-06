@@ -33,7 +33,7 @@ DEFAULTS = {
     },
     "audio": {
         "sample_rate": 32000,
-        "clip_seconds": 20.0,    # every clip is cropped or tiled to this length
+        "clip_seconds": 20.0,    # every chunk is cropped or tiled to this length
     },
     "taxonomy": {
         "genus_head": False,     # add a second output head for genus (or any higher rank)
@@ -52,8 +52,8 @@ DEFAULTS = {
         "passt_arch": "auto",   # auto = closest to audio.clip_seconds among the 10/20/30 s AudioSet models; or passt_20sec, passt_30sec, passt_s_kd_p16_128_ap486 (10 s), ...
         "passt_fmin": 100.0,
         "passt_fmax": None,      # None = sample_rate / 2 - 1000 Hz (the hear21passt default)
-        "passt_patchout_t": 0,   # structured patchout: time patches dropped per clip in training
-        "passt_patchout_f": 0,   # structured patchout: frequency patches dropped per clip in training
+        "passt_patchout_t": 0,   # structured patchout: time patches dropped per chunk in training
+        "passt_patchout_f": 0,   # structured patchout: frequency patches dropped per chunk in training
     },
     "frontend": {
         "fmin": 60.0,

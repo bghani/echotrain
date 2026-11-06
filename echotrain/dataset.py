@@ -1,4 +1,4 @@
-"""PyTorch dataset: loads a clip, fixes its length, applies training augmentation."""
+"""PyTorch dataset: loads a chunk, fixes its length, applies training augmentation."""
 import warnings
 
 import librosa
@@ -8,7 +8,7 @@ from torch_audiomentations import AddBackgroundNoise, AddColoredNoise, Shift
 
 
 def fix_length(x, n_samples, random_crop):
-    """Crop long clips (randomly when training) and tile short clips up to n_samples."""
+    """Crop long chunks (randomly when training) and tile short chunks up to n_samples."""
     if len(x) == 0:
         return np.zeros(n_samples, dtype=np.float32)
     if len(x) > n_samples:

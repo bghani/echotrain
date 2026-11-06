@@ -62,7 +62,7 @@ def _single(m, cfg, n_species, n_genus):
     return networks.EffNetSingle(name, n_species, _frontend(cfg), pretrained=pretrained)
 
 
-# passt_arch: auto chooses among these (pre-training clip length in seconds)
+# passt_arch: auto chooses among these (pre-training input length in seconds)
 PASST_AUTO = {"passt_s_kd_p16_128_ap486": 10, "passt_20sec": 20, "passt_30sec": 30}
 
 
@@ -72,7 +72,7 @@ def _passt(m, cfg, n_species, n_genus):
                         fmax=mc["passt_fmax"], freqm=f["freqm"], timem=f["timem"])
     arch = mc["passt_arch"]
     if arch == "auto":
-        # AudioSet checkpoint whose pre-training clip length is closest to ours
+        # AudioSet checkpoint whose pre-training length is closest to our chunk length
         clip = cfg["audio"]["clip_seconds"]
         arch = min(PASST_AUTO, key=lambda a: abs(PASST_AUTO[a] - clip))
         print(f"model.passt_arch=auto -> {arch} (closest to clip_seconds={clip})")
@@ -95,11 +95,11 @@ def _perch_weights(cfg):
 
 # name: (builder, two_heads, needs_legacy, description)
 MODELS = {
-    "effnet": (_whole, True, False, "EfficientNet (model.backbone, ImageNet) on the whole clip. Species + genus heads."),
+    "effnet": (_whole, True, False, "EfficientNet (model.backbone, ImageNet). Species + genus heads."),
     "effnet_single": (_single, False, False, "EfficientNet (model.backbone, ImageNet), species head only."),
     "passt": (
         _passt, True, False,
-        "PaSST transformer (model.passt_arch, AudioSet) on the whole clip. Species + genus heads."),
+        "PaSST transformer (model.passt_arch, AudioSet). Species + genus heads."),
     "passt_single": (_passt, False, False, "PaSST transformer (model.passt_arch, AudioSet), species head only."),
     "perch_effnet_b3": (
         lambda m, cfg, ns, ng: m.ChiroEchoPerchModel(ns, ng, mel=_frontend(cfg), perch_weights_path=_perch_weights(cfg)),

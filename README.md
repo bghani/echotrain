@@ -3,7 +3,7 @@
 Training toolkit for bioacoustic classifiers: CNN and transformer models for
 species, call types, dialects and other sound classes.
 
-EchoTrain trains a sound classifier from labelled audio clips. The labels can be
+EchoTrain trains a sound classifier from labelled audio chunks. The labels can be
 anything you can hear: species (bats, birds, frogs, insects, ...), but equally
 call types, song types, dialects, individuals, life stages, sexes or
 behaviours. The model takes raw waveforms, computes a log-mel spectrogram on
@@ -16,7 +16,7 @@ You can train two families of models, both starting from pre-trained weights:
 | family | default | other choices |
 |---|---|---|
 | CNN | **EfficientNet-B3** (ImageNet weights) | any timm EfficientNet (B0 to B8, V2); EfficientNet-B3 with Perch v2 weights |
-| Transformer | **PaSST** (AudioSet weights) | 10 s, 20 s or 30 s checkpoint, picked automatically from the clip length |
+| Transformer | **PaSST** (AudioSet weights) | 10 s, 20 s or 30 s checkpoint, picked automatically from the chunk length |
 
 The model is one line in the config (`model.name`, see [section 4](#4-models)).
 To train your own architecture, write it as a PyTorch module and register it
@@ -81,7 +81,7 @@ The Perch v2 weights are in `checkpoints/`.
 
 ## 2. Prepare the data
 
-The model trains on clips of a fixed length (`audio.clip_seconds`, 20 s for
+The model trains on chunks of a fixed length (`audio.clip_seconds`, 20 s for
 bats). A file that is longer is cropped, so the rest of it is never seen; a
 file that is shorter is repeated (tiled) to fill the length. The training data
 should therefore already be cut into chunks of about `audio.clip_seconds`. If
@@ -148,7 +148,7 @@ writes two things:
 1. **Chunk files** in `--output-dir`: mono `.wav` at `--target-sr` (default
    32000, the same as `audio.sample_rate`), named `<recording>_chunk000.wav`,
    `<recording>_chunk001.wav`, ..., in one subfolder per class (or all in one
-   folder with `--flat`). A last piece shorter than one chunk is tiled to full
+   folder with `--flat`). A leftover at the end shorter than one chunk is tiled to full
    length if it is at least `--min-chunk-seconds` (default 2) long, and dropped
    otherwise. A recording shorter than one chunk always gives one tiled chunk.
 2. **A manifest CSV** (`--output-manifest`): one row per chunk, with every
@@ -315,9 +315,9 @@ Set `model.name` to one of the names below (default `effnet`). In this table
 
 | name | heads | description |
 |---|---|---|
-| `effnet` | species + genus | EfficientNet on the whole clip. Default. |
+| `effnet` | species + genus | EfficientNet. Default. |
 | `effnet_single` | species | EfficientNet, no genus head |
-| `passt` | species + genus | PaSST audio transformer (AudioSet weights) on the whole clip |
+| `passt` | species + genus | PaSST audio transformer (AudioSet weights) |
 | `passt_single` | species | PaSST, no genus head |
 | `perch_effnet_b3` | species + genus | EfficientNet-B3 starting from Perch v2 weights (`model.perch_weights`) |
 | `perch_effnet_b3_single` | species | Perch v2 weights, no genus head |
@@ -343,9 +343,9 @@ uv run train.py --config configs/bats.yaml --set model.backbone=efficientnet_b0 
 ```
 
 **PaSST.** `model.passt_arch` picks the pre-trained AudioSet weights. PaSST
-checkpoints are trained on a fixed clip length:
+checkpoints are trained on a fixed input length:
 
-| `model.passt_arch` | pre-training clip length | chosen by `auto` when `audio.clip_seconds` is |
+| `model.passt_arch` | pre-training length | chosen by `auto` when `audio.clip_seconds` is |
 |---|---|---|
 | `passt_s_kd_p16_128_ap486` | 10 s | 15 or less |
 | `passt_20sec` | 20 s | more than 15, up to 25 |
@@ -354,7 +354,7 @@ checkpoints are trained on a fixed clip length:
 By default (`passt_arch: auto`) the checkpoint whose length is closest to
 `audio.clip_seconds` is used, and the run prints which one, e.g.
 `model.passt_arch=auto -> passt_s_kd_p16_128_ap486 (closest to clip_seconds=5)`.
-Other clip lengths work too: the time position encodings are cut or
+Other chunk lengths work too: the time position encodings are cut or
 stretched to fit. To use a specific checkpoint, name it in the config or on
 the command line:
 
@@ -372,7 +372,7 @@ first run. A PaSST checkpoint from the old batecho / insectaecho code can be
 used as `model.init_checkpoint`.
 
 PaSST needs much more GPU memory than EfficientNet. On a 48 GB GPU with 20 s
-clips, use `train.batch_size: 2` with `train.grad_accum_steps: 4` or more.
+chunks, use `train.batch_size: 2` with `train.grad_accum_steps: 4` or more.
 You can also turn on structured patchout (`model.passt_patchout_t: 100`,
 `model.passt_patchout_f: 4`), which drops patches in training and allows a
 batch size of 8.
@@ -436,7 +436,7 @@ registered the same way with `needs_legacy=True`.
 - Class balance: with `sampler.balanced`, files of rare classes are drawn
   more often (weight 1 / min(count, cap)^power). `sampler.noise_class` is
   drawn less often.
-- Augmentation: mixup of two training clips (`augment.mixup_rate`; the mix
+- Augmentation: mixup of two training chunks (`augment.mixup_rate`; the mix
   is labelled with both classes), SpecAugment masking in the frontend, and
   optionally coloured noise, time shift and background noise.
 - Metrics, after pooling chunks into recordings: mAP (mean over classes that
