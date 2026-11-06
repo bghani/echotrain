@@ -52,17 +52,6 @@ def _effnet(cfg):
     return name, pretrained
 
 
-def _chunked(m, cfg, n_species, n_genus):
-    chunk = int(round(cfg["model"]["chunk_seconds"] * cfg["audio"]["sample_rate"]))
-    clip = int(round(cfg["audio"]["clip_seconds"] * cfg["audio"]["sample_rate"]))
-    if clip % chunk:
-        raise ValueError(f"audio.clip_seconds ({cfg['audio']['clip_seconds']}) must be a multiple of "
-                         f"model.chunk_seconds ({cfg['model']['chunk_seconds']})")
-    return networks.EffNetChunked(_effnet(cfg)[0], n_species, n_genus, _frontend(cfg),
-                                  pretrained=cfg["model"]["pretrained"], chunk_samples=chunk,
-                                  aggregation=cfg["model"]["chunk_aggregation"])
-
-
 def _whole(m, cfg, n_species, n_genus):
     name, pretrained = _effnet(cfg)
     return networks.EffNet(name, n_species, n_genus, _frontend(cfg), pretrained=pretrained)
@@ -106,10 +95,6 @@ def _perch_weights(cfg):
 
 # name: (builder, two_heads, needs_legacy, description)
 MODELS = {
-    "effnet_chunked": (
-        _chunked, True, False,
-        "EfficientNet (model.backbone, ImageNet) on each chunk_seconds piece of the clip; chunk logits are "
-        "pooled. Species + genus heads."),
     "effnet": (_whole, True, False, "EfficientNet (model.backbone, ImageNet) on the whole clip. Species + genus heads."),
     "effnet_single": (_single, False, False, "EfficientNet (model.backbone, ImageNet), species head only."),
     "passt": (
@@ -127,7 +112,6 @@ MODELS = {
 # Names used before model.backbone existed. They build the same model as the
 # new name; the backbone comes from model.backbone (default efficientnet_b3).
 ALIASES = {
-    "effnet_b3_chunked": "effnet_chunked",
     "effnet_b3": "effnet",
     "effnet_b3_single": "effnet_single",
 }

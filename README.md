@@ -15,7 +15,7 @@ You can train two families of models, both starting from pre-trained weights:
 
 | family | default | other choices |
 |---|---|---|
-| CNN | **EfficientNet-B3** (ImageNet weights) | any timm EfficientNet (B0 to B8, V2), whole clip or chunked; EfficientNet-B3 with Perch v2 weights |
+| CNN | **EfficientNet-B3** (ImageNet weights) | any timm EfficientNet (B0 to B8, V2); EfficientNet-B3 with Perch v2 weights |
 | Transformer | **PaSST** (AudioSet weights) | 10 s, 20 s or 30 s checkpoint, picked automatically from the clip length |
 
 The model is one line in the config (`model.name`, see [section 4](#4-models)).
@@ -46,6 +46,7 @@ echotrain/                the training code
 tools/prepare_chunks.py   cut long recordings into fixed-length chunks
 tools/add_noise_to_manifest.py  add a background-noise class to a manifest
 pyproject.toml, uv.lock   dependencies (managed with uv)
+checkpoints/              Perch v2 backbone weights for the perch_* models
 legacy/                   unchanged model definitions from the old repository
 inputs/bats/              species list and species -> genus table for the bats
 ```
@@ -76,6 +77,7 @@ line with `uv.lock`.
 - Linting: `uv run --group dev ruff check .`
 
 The first run downloads the pre-trained weights: ImageNet for EfficientNet (via `timm`), AudioSet for PaSST.
+The Perch v2 weights are in `checkpoints/`.
 
 ## 2. Prepare the data
 
@@ -247,14 +249,14 @@ one is started next to it as `runs/<run_name>_<model>_<timestamp>/` (e.g.
 If a run stops (crash, time limit), continue it with:
 
 ```bash
-uv run train.py --resume runs/bats_effnet_b3_chunked/last.pt
+uv run train.py --resume runs/bats_effnet_b3/last.pt
 ```
 
 **Model selection.** The best epoch is picked on the `val` split. Keep the
 `test` split for the end:
 
 ```bash
-uv run evaluate.py --run runs/bats_effnet_b3_chunked --split test
+uv run evaluate.py --run runs/bats_effnet_b3 --split test
 uv run evaluate.py --run runs/my_frogs --dir /data/frogs/test        # folder dataset
 ```
 
@@ -264,14 +266,12 @@ the backbone is reused and the output heads start fresh.
 
 ## 4. Models
 
-Set `model.name` to one of:
-
-In this table "species" means the class head and "genus" the parent-group head.
+Set `model.name` to one of the names below (default `effnet`). In this table
+"species" means the class head and "genus" the parent-group head.
 
 | name | heads | description |
 |---|---|---|
-| `effnet_chunked` | species + genus | EfficientNet applied to each `model.chunk_seconds` piece of the clip; the chunk scores are max-pooled. Default for bats. |
-| `effnet` | species + genus | EfficientNet on the whole clip |
+| `effnet` | species + genus | EfficientNet on the whole clip. Default. |
 | `effnet_single` | species | EfficientNet, no genus head |
 | `passt` | species + genus | PaSST audio transformer (AudioSet weights) on the whole clip |
 | `passt_single` | species | PaSST, no genus head |
@@ -290,8 +290,8 @@ which ships with the repository. Set it to `null` to start from random weights.
 works, e.g. `efficientnet_b0` to `efficientnet_b5`, `tf_efficientnet_b0` to
 `tf_efficientnet_b8`, or `tf_efficientnetv2_s`. With `model.pretrained: true`
 (the default) the backbone must have ImageNet weights in timm: for B6 to B8,
-use the `tf_` versions. The old names `effnet_b3_chunked`, `effnet_b3` and
-`effnet_b3_single` still work and mean the same as the new names with
+use the `tf_` versions. The old names `effnet_b3` and `effnet_b3_single`
+still work and mean the same as `effnet` / `effnet_single` with
 `efficientnet_b3`.
 
 ```bash
@@ -338,9 +338,9 @@ uv run train.py --config configs/bats.yaml --set model.name=passt --set run_name
     --set train.batch_size=2 --set train.grad_accum_steps=8
 ```
 
-The EfficientNet and PaSST models use different spectrograms. The EfficientNet
-and Perch models use the shared frontend (`echotrain/frontend.py`, settings
-under `frontend:`). With a 32 kHz sample rate it covers 60 Hz to
+**Spectrograms.** The EfficientNet and Perch models use the shared frontend
+(`echotrain/frontend.py`, settings under `frontend:`); PaSST uses its own
+(see above). With a 32 kHz sample rate the shared frontend covers 60 Hz to
 16 kHz. Bat recordings are time-expanded 10x during data preparation, so this
 range corresponds to 0.6 to 160 kHz in the original recording.
 

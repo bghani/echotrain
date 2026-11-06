@@ -40,14 +40,12 @@ DEFAULTS = {
         "genus_map": None,       # optional CSV with columns species,genus; otherwise genus = first word of the name
     },
     "model": {
-        "name": "effnet_chunked", # see README section 4 / MODELS in echotrain/model_zoo.py
+        "name": "effnet",         # see README section 4 / MODELS in echotrain/model_zoo.py
         "backbone": "efficientnet_b3",  # effnet_* models: any timm EfficientNet, e.g. efficientnet_b0 ... b5,
                                         # tf_efficientnet_b0 ... b8, tf_efficientnetv2_s
         "pretrained": True,      # ImageNet weights (EfficientNet) / AudioSet weights (PaSST)
         "perch_weights": "checkpoints/perch_v2_backbone_timm.pt",  # backbone weights for the perch_* models;
                                  # relative paths are tried from the working directory, then the repo root
-        "chunk_seconds": 5.0,    # effnet_chunked: each clip is cut into chunks of this length
-        "chunk_aggregation": "max",
         "init_checkpoint": None, # warm start: load matching weights from an earlier run
         # passt / passt_single. PaSST has its own spectrogram frontend (the one it was
         # pre-trained with); of the frontend section only n_mels (keep 128), freqm and timem apply.

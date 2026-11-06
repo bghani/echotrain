@@ -43,7 +43,7 @@ taxonomy:
   # genus_map: inputs/my_species_genus_map.csv   # optional CSV with columns species,genus
 
 model:
-  name: effnet                    # effnet, effnet_chunked, passt, ... (README section 4); *_single if genus_head: false
+  name: effnet                    # effnet, passt, perch_effnet_b3, ... (README section 4); *_single if genus_head: false
   backbone: efficientnet_b3
   # passt_arch: auto              # PaSST only: auto picks the checkpoint closest to clip_seconds
 

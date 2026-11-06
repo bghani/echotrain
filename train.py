@@ -2,7 +2,7 @@
 
     uv run train.py --config configs/bats.yaml
     uv run train.py --config configs/bats.yaml --set train.batch_size=8 --set run_name=bs8
-    uv run train.py --resume runs/bats_effnet_b3_chunked/last.pt
+    uv run train.py --resume runs/bats_effnet_b3/last.pt
 
 Everything a run produces goes to <output_dir>/<run_name>/:
     config.yaml        the full config used (all defaults filled in)

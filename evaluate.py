@@ -1,7 +1,7 @@
 """Score a trained run on another split (e.g. the test set).
 
     # manifest datasets: pick split values from the manifest
-    uv run evaluate.py --run runs/bats_effnet_b3_chunked --split test
+    uv run evaluate.py --run runs/bats_effnet_b3 --split test
     # folder datasets: point at a folder with one subfolder per class
     uv run evaluate.py --run runs/my_birds --dir /data/my_birds/test
 

@@ -1,7 +1,6 @@
 """Model classes used by model_zoo.py.
 
-The EfficientNet classes behave like ChiroEchoModel, ChiroEchoModelCHUNKED and
-EfficientNetBat in legacy/models.py, but take the timm backbone name as an
+The EfficientNet classes behave like ChiroEchoModel and EfficientNetBat in legacy/models.py, but take the timm backbone name as an
 argument (efficientnet_b0 ... b5, tf_efficientnet_b0 ... b8, efficientnetv2,
 ...). Parameter names are the same as in the legacy classes, so checkpoints
 of the legacy EfficientNet-B3 models load into the b3 versions of these.
@@ -50,29 +49,6 @@ class EffNet(nn.Module):
 
     def forward(self, x):
         return self.heads(self.backbone(self.mel(x).unsqueeze(1)))
-
-
-class EffNetChunked(EffNet):
-    """EfficientNet applied to each chunk_samples piece of the clip; chunk logits are pooled."""
-
-    def __init__(self, backbone, num_species, num_genus, mel, pretrained=True, chunk_samples=160000,
-                 aggregation="max"):
-        super().__init__(backbone, num_species, num_genus, mel, pretrained)
-        if aggregation not in ("max", "mean"):
-            raise ValueError(f"model.chunk_aggregation must be 'max' or 'mean', got {aggregation!r}")
-        self.chunk_samples = chunk_samples
-        self.aggregation = aggregation
-
-    def forward(self, x):
-        batch, samples = x.shape
-        if samples % self.chunk_samples:
-            raise ValueError(f"Input length {samples} is not a multiple of chunk_samples={self.chunk_samples}")
-        n_chunks = samples // self.chunk_samples
-        emb = self.backbone(self.mel(x.reshape(batch * n_chunks, self.chunk_samples)).unsqueeze(1))
-        out = self.heads(emb)
-        pool = (lambda t: t.view(batch, n_chunks, -1).amax(dim=1)) if self.aggregation == "max" \
-            else (lambda t: t.view(batch, n_chunks, -1).mean(dim=1))
-        return tuple(pool(o) for o in out) if isinstance(out, tuple) else pool(out)
 
 
 class EffNetSingle(nn.Module):
