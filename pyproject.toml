@@ -1,7 +1,7 @@
 [project]
-name = "echo-train"
+name = "echotrain"
 version = "0.1.0"
-description = "Train audio classifiers for any species group (bats, birds, frogs, insects, ...)"
+description = "EchoTrain: train CNN and transformer bioacoustic classifiers (species, call types, dialects, ...)"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 dependencies = [

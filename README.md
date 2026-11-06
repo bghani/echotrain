@@ -1,12 +1,26 @@
-# echo_train
+# EchoTrain
 
-Train a sound classifier from labelled audio clips. The labels can be
+Training toolkit for bioacoustic classifiers: CNN and transformer models for
+species, call types, dialects and other sound classes.
+
+EchoTrain trains a sound classifier from labelled audio clips. The labels can be
 anything you can hear: species (bats, birds, frogs, insects, ...), but equally
 call types, song types, dialects, individuals, life stages, sexes or
 behaviours. The model takes raw waveforms, computes a log-mel spectrogram on
 the GPU, and predicts which classes are present (multi-label, one sigmoid per
 class). Optionally, a second head predicts a coarser parent group of each
 class (for species: the genus).
+
+You can train two families of models, both starting from pre-trained weights:
+
+| family | default | other choices |
+|---|---|---|
+| CNN | **EfficientNet-B3** (ImageNet weights) | any timm EfficientNet (B0 to B8, V2), whole clip or chunked; EfficientNet-B3 with Perch v2 weights |
+| Transformer | **PaSST** (AudioSet weights) | 10 s, 20 s or 30 s checkpoint, picked automatically from the clip length |
+
+The model is one line in the config (`model.name`, see [section 4](#4-models)).
+To train your own architecture, write it as a PyTorch module and register it
+under a new name; see [Adding your own model](#adding-your-own-model).
 
 > **About the names.** The code grew out of species classification, so some
 > option names say `species` and `genus`. Read them as *class* and *parent
@@ -44,7 +58,8 @@ needed: no conda and no manual virtualenv.
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh   # once per machine, if uv is not installed yet
-cd echo_train
+git clone https://github.com/bghani/echotrain.git
+cd echotrain
 uv sync                                            # creates .venv/ with the exact versions in uv.lock
 ```
 
@@ -325,10 +340,43 @@ under `frontend:`). With a 32 kHz sample rate it covers 60 Hz to
 16 kHz. Bat recordings are time-expanded 10x during data preparation, so this
 range corresponds to 0.6 to 160 kHz in the original recording.
 
-The EfficientNet and PaSST classes are in `echotrain/networks.py`. The Perch
-models come from `legacy/models.py`, an unchanged copy from the old
-repository that contains many more architectures. To use another one, add it
-to `MODELS` in `echotrain/model_zoo.py`.
+### Adding your own model
+
+Any PyTorch model can be trained, CNN or transformer. It has to:
+
+- take a batch of raw waveforms, shape `(batch, samples)`, at
+  `audio.sample_rate`, and compute its own spectrogram (reuse
+  `echotrain/frontend.py`, as the EfficientNet models do, or bring your own);
+- return the class logits `(batch, n_classes)`, or a tuple
+  `(class_logits, parent_logits)` if it has a parent-group (genus) head.
+
+Then:
+
+1. Put the class in `echotrain/networks.py` (next to the EfficientNet and
+   PaSST classes, which are good templates).
+2. Add a builder function and an entry to `MODELS` in
+   `echotrain/model_zoo.py`:
+
+   ```python
+   def _my_net(m, cfg, n_species, n_genus):
+       return networks.MyNet(n_species, n_genus, mel=_frontend(cfg))
+
+   MODELS = {
+       ...
+       # name: (builder, two_heads, needs_legacy, description)
+       "my_net": (_my_net, True, False, "My architecture. Species + genus heads."),
+   }
+   ```
+
+   `two_heads` says whether the model returns the parent-group logits too
+   (use it with `taxonomy.genus_head: true`). New settings for your model go
+   into the `model:` section of `DEFAULTS` in `echotrain/options.py`.
+3. Train it with `--set model.name=my_net`. Loss, sampling, mixup,
+   evaluation and checkpoints work unchanged.
+
+`legacy/models.py` is an unchanged copy from the old repository with many
+more architectures (it is where the Perch models come from); they can be
+registered the same way with `needs_legacy=True`.
 
 ## 5. Training details
 
