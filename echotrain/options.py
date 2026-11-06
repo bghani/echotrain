@@ -40,12 +40,21 @@ DEFAULTS = {
         "genus_map": None,       # optional CSV with columns species,genus; otherwise genus = first word of the name
     },
     "model": {
-        "name": "effnet_b3_chunked",
-        "pretrained": True,      # ImageNet weights for the EfficientNet backbones
+        "name": "effnet_chunked", # see README section 4 / MODELS in echotrain/model_zoo.py
+        "backbone": "efficientnet_b3",  # effnet_* models: any timm EfficientNet, e.g. efficientnet_b0 ... b5,
+                                        # tf_efficientnet_b0 ... b8, tf_efficientnetv2_s
+        "pretrained": True,      # ImageNet weights (EfficientNet) / AudioSet weights (PaSST)
         "perch_weights": None,   # backbone weights for the perch_* models
-        "chunk_seconds": 5.0,    # effnet_b3_chunked: each clip is cut into chunks of this length
+        "chunk_seconds": 5.0,    # effnet_chunked: each clip is cut into chunks of this length
         "chunk_aggregation": "max",
         "init_checkpoint": None, # warm start: load matching weights from an earlier run
+        # passt / passt_single. PaSST has its own spectrogram frontend (the one it was
+        # pre-trained with); of the frontend section only n_mels (keep 128), freqm and timem apply.
+        "passt_arch": "passt_20sec",  # passt_20sec, passt_30sec, passt_s_kd_p16_128_ap486 (10 s), ...
+        "passt_fmin": 100.0,
+        "passt_fmax": None,      # None = sample_rate / 2 - 1000 Hz (the hear21passt default)
+        "passt_patchout_t": 0,   # structured patchout: time patches dropped per clip in training
+        "passt_patchout_f": 0,   # structured patchout: frequency patches dropped per clip in training
     },
     "frontend": {
         "fmin": 60.0,

@@ -28,7 +28,7 @@ taxonomy:
   genus_head: false
 
 model:
-  name: effnet_b3_single
+  name: effnet_single
 
 sampler:
   balanced: true

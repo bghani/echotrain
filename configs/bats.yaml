@@ -28,7 +28,8 @@ taxonomy:
   genus_map: inputs/bats/species_genus_map.csv
 
 model:
-  name: effnet_b3_chunked         # see README for the other choices
+  name: effnet_chunked            # see README for the other choices
+  backbone: efficientnet_b3       # any timm EfficientNet (efficientnet_b0 ... b5, tf_efficientnet_b0 ... b8)
   chunk_seconds: 5
   chunk_aggregation: max
 

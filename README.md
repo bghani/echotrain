@@ -17,6 +17,7 @@ echotrain/                the training code
   sampler.py              class-balanced sampling
   frontend.py             waveform -> log-mel spectrogram (Perch v2 style)
   model_zoo.py            model names usable in the config
+  networks.py             EfficientNet (any size) and PaSST model classes
   engine.py, metrics.py   training loop, evaluation, mAP / F1 / AUROC
 tools/prepare_chunks.py   cut long recordings into fixed-length chunks
 tools/add_noise_to_manifest.py  add a background-noise class to a manifest
@@ -49,7 +50,7 @@ line with `uv.lock`.
 - Adding a package: `uv add <package>`. This updates `pyproject.toml` and `uv.lock`; commit both.
 - Linting: `uv run --group dev ruff check .`
 
-The first run downloads ImageNet weights for EfficientNet-B3 (via `timm`).
+The first run downloads the pre-trained weights: ImageNet for EfficientNet (via `timm`), AudioSet for PaSST.
 
 ## 2. Prepare the data
 
@@ -179,21 +180,60 @@ Set `model.name` to one of:
 
 | name | heads | description |
 |---|---|---|
-| `effnet_b3_chunked` | species + genus | EfficientNet-B3 (ImageNet) applied to each `model.chunk_seconds` piece of the clip; the chunk scores are max-pooled. Default for bats. |
-| `effnet_b3` | species + genus | EfficientNet-B3 (ImageNet) on the whole clip |
+| `effnet_chunked` | species + genus | EfficientNet applied to each `model.chunk_seconds` piece of the clip; the chunk scores are max-pooled. Default for bats. |
+| `effnet` | species + genus | EfficientNet on the whole clip |
+| `effnet_single` | species | EfficientNet, no genus head |
+| `passt` | species + genus | PaSST audio transformer (AudioSet weights) on the whole clip |
+| `passt_single` | species | PaSST, no genus head |
 | `perch_effnet_b3` | species + genus | EfficientNet-B3 starting from Perch v2 weights (`model.perch_weights`) |
-| `effnet_b3_single` | species | EfficientNet-B3 (ImageNet), no genus head |
 | `perch_effnet_b3_single` | species | Perch v2 weights, no genus head |
 
 Models with a genus head need `taxonomy.genus_head: true`; the `*_single`
 models need it to be `false`.
 
-All models use the same spectrogram frontend (`echotrain/frontend.py`,
-settings under `frontend:`). With a 32 kHz sample rate it covers 60 Hz to
+**EfficientNet size.** The `effnet*` models take their backbone from
+`model.backbone` (default `efficientnet_b3`). Any EfficientNet in `timm`
+works, e.g. `efficientnet_b0` to `efficientnet_b5`, `tf_efficientnet_b0` to
+`tf_efficientnet_b8`, or `tf_efficientnetv2_s`. With `model.pretrained: true`
+(the default) the backbone must have ImageNet weights in timm: for B6 to B8,
+use the `tf_` versions. The old names `effnet_b3_chunked`, `effnet_b3` and
+`effnet_b3_single` still work and mean the same as the new names with
+`efficientnet_b3`.
+
+```bash
+uv run train.py --config configs/bats.yaml --set model.backbone=efficientnet_b0 --set run_name=bats_b0
+```
+
+**PaSST.** `model.passt_arch` picks the pre-trained weights:
+`passt_20sec` (default, 20 s clips), `passt_30sec`, or
+`passt_s_kd_p16_128_ap486` (10 s clips). Pick the one closest to
+`audio.clip_seconds`. Other clip lengths also work: the time position
+encodings are cut or stretched to fit. PaSST uses its own spectrogram (the one
+it was pre-trained with: 128 mel bins, 10 ms hop, from `model.passt_fmin` to
+`model.passt_fmax`). Only `frontend.freqm` / `frontend.timem` (masking) apply
+from the `frontend:` section. The weights (about 350 MB) are downloaded on the
+first run. A PaSST checkpoint from the old batecho / insectaecho code can be
+used as `model.init_checkpoint`.
+
+PaSST needs much more GPU memory than EfficientNet. On a 48 GB GPU with 20 s
+clips, use `train.batch_size: 2` with `train.grad_accum_steps: 4` or more.
+You can also turn on structured patchout (`model.passt_patchout_t: 100`,
+`model.passt_patchout_f: 4`), which drops patches in training and allows a
+batch size of 8.
+
+```bash
+uv run train.py --config configs/bats.yaml --set model.name=passt --set run_name=bats_passt \
+    --set train.batch_size=2 --set train.grad_accum_steps=8
+```
+
+The EfficientNet and PaSST models use different spectrograms. The EfficientNet
+and Perch models use the shared frontend (`echotrain/frontend.py`, settings
+under `frontend:`). With a 32 kHz sample rate it covers 60 Hz to
 16 kHz. Bat recordings are time-expanded 10x during data preparation, so this
 range corresponds to 0.6 to 160 kHz in the original recording.
 
-The model classes live in `legacy/models.py`, an unchanged copy from the old
+The EfficientNet and PaSST classes are in `echotrain/networks.py`. The Perch
+models come from `legacy/models.py`, an unchanged copy from the old
 repository that contains many more architectures. To use another one, add it
 to `MODELS` in `echotrain/model_zoo.py`.
 

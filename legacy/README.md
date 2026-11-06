@@ -16,5 +16,13 @@ The other files here exist only so that `models.py` can be imported as-is:
 installed, `model_zoo.py` puts a placeholder in its place, so that only the
 ONNX-based Perch models fail, and they fail with a clear error.
 
+`hear21passt/models/` holds `passt.py` and `helpers/vit_helpers.py`, unchanged
+copies of the PaSST model code from `batecho/hear21passt` (the same as in
+`insectaecho`). It is the version that can stretch the time position encodings
+for clips longer than the pre-training length. The rest of that package
+(`base.py`, `wrapper.py`, `models/preprocess.py`) is not copied, because it imports
+the old `config.py` and `pcen`. The `passt` models use `echotrain/networks.py`
+and the spectrogram `PasstFrontend` in `echotrain/frontend.py` instead.
+
 Once it is decided which models to keep, move them into `echotrain/models.py`
 and delete this folder.
