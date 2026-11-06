@@ -1,0 +1,55 @@
+# European bats (ChiroEcho setup): manifest dataset, species + genus heads.
+# Every option and its default is listed in echotrain/options.py.
+
+run_name: bats_effnet_b3_chunked
+output_dir: runs
+device: cuda:0
+
+data:
+  mode: manifest
+  # One row per 20 s chunk at 32 kHz (time-expanded), made with tools/prepare_chunks.py,
+  # noise rows added with tools/add_noise_to_manifest.py.
+  manifest: /data/burooj/models/batecho/inputs/manifest_chunks_v4.csv
+  audio_root: /data/shared/data   # chunk_path values are relative to this
+  path_col: chunk_path
+  label_col: latin
+  split_col: split
+  group_col: file_path            # chunks of the same source recording are pooled in evaluation
+  train_splits: [train]
+  val_splits: [val]               # keep "test" for the final evaluate.py run
+  species_list: inputs/bats/species.csv
+
+audio:
+  sample_rate: 32000
+  clip_seconds: 20
+
+taxonomy:
+  genus_head: true
+  genus_map: inputs/bats/species_genus_map.csv
+
+model:
+  name: effnet_b3_chunked         # see README for the other choices
+  chunk_seconds: 5
+  chunk_aggregation: max
+
+augment:
+  mixup_rate: 0.1
+
+sampler:
+  balanced: true
+  cap: 1000
+  power: 0.5
+  noise_class: noise
+  noise_multiplier: 0.4
+
+train:
+  epochs: 100
+  batch_size: 16
+  num_workers: 16
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  early_stop_patience: 15
+
+eval:
+  batch_size: 16
+  num_workers: 16

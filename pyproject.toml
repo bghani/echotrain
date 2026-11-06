@@ -1,0 +1,50 @@
+[project]
+name = "echo-train"
+version = "0.1.0"
+description = "Train audio classifiers for any species group (bats, birds, frogs, insects, ...)"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "torch>=2.3,<2.6",
+    "torchaudio>=2.3,<2.6",
+    "torchvision>=0.18,<0.21",
+    "timm>=1.0,<1.1",
+    "torchmetrics>=1.0,<2",
+    "torch-audiomentations>=0.11,<0.13",
+    "librosa>=0.10.2",
+    "soundfile>=0.12",
+    "soxr>=0.3",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "pandas>=2.0",
+    "pyyaml>=6.0",
+    "tqdm>=4.65",
+    "matplotlib>=3.7",  # only imported by legacy/models.py
+]
+
+[dependency-groups]
+dev = ["ruff>=0.6"]
+
+[tool.uv]
+# This is an application run from the repo root, not a library to install.
+package = false
+
+# On Linux, take PyTorch builds for CUDA 12.1 (runs on NVIDIA drivers >= 525).
+# On macOS, the regular PyPI wheels (CPU / Apple MPS) are used.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu121", marker = "sys_platform == 'linux'" }]
+torchaudio = [{ index = "pytorch-cu121", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cu121", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["legacy"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501", "E731"]
