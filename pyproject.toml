@@ -24,6 +24,13 @@ dependencies = [
 
 [dependency-groups]
 dev = ["ruff>=0.6"]
+notebook = [
+    "ipykernel>=6",
+    "ipywidgets>=8",
+    "jupyterlab>=4",
+    "nbconvert>=7",
+    "umap-learn>=0.5",
+]
 
 [tool.uv]
 # This is an application run from the repo root, not a library to install.

@@ -1,0 +1,42 @@
+# Toy dataset of 5 European frog species, used by notebooks/tutorial_toy_frogs.ipynb.
+# The repository has the full recordings (data/toy_frogs/recordings); cut them
+# into 5 s chunks first (the tutorial does this), then train. From the repository root:
+#   for s in train val test; do
+#     uv run tools/prepare_chunks.py --input-dir data/toy_frogs/recordings/$s --split $s \
+#       --output-dir data/toy_frogs_chunks/$s --output-manifest data/toy_frogs_chunks/$s.csv --chunk-seconds 5
+#   done
+#   uv run train.py --config configs/toy_frogs.yaml
+# Every option and its default is listed in echotrain/options.py.
+
+run_name: toy_frogs
+output_dir: runs
+device: cuda:0             # falls back to the CPU if there is no GPU
+
+data:
+  mode: folders            # one subfolder per species
+  train_dir: data/toy_frogs_chunks/train
+  val_dir: data/toy_frogs_chunks/val
+
+audio:
+  sample_rate: 32000
+  clip_seconds: 5          # the chunks are 5 s long
+
+taxonomy:
+  genus_head: true         # 4 genera: Bombina, Bufo, Epidalea, Hyla (2 species)
+
+model:
+  name: effnet
+  backbone: efficientnet_b0  # small and fast; efficientnet_b3 is the usual choice for real data
+
+augment:
+  mixup_rate: 0.1
+
+train:
+  epochs: 20
+  batch_size: 16
+  num_workers: 4
+  lr: 3.0e-4
+
+eval:
+  batch_size: 32
+  num_workers: 4

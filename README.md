@@ -28,12 +28,21 @@ under a new name; see [Adding your own model](#adding-your-own-model).
 > predicts whatever grouping `taxonomy.genus_map` defines. See
 > [Not only species](#not-only-species) below.
 
+**New here?** The tutorial notebook `notebooks/tutorial_toy_frogs.ipynb` runs
+the whole workflow on a small set of frog recordings that ships with the
+repository: exploring the sounds, cutting the recordings into chunks, training
+and comparing two models, evaluating on a test set, and UMAP maps of the data
+before and after training. See [Tutorial](#tutorial).
+
 ```
 train.py                  train a model from a config file
 evaluate.py               score a trained model on another split (e.g. test)
 configs/example_folders.yaml   example config for a dataset stored as one folder per class
 configs/example_manifest.yaml  example config for a dataset described by a manifest CSV
 configs/bats.yaml         the European bat setup (manifest dataset, species + genus)
+configs/toy_frogs.yaml    the toy frog dataset used by the tutorial
+notebooks/                tutorial_toy_frogs.ipynb: end-to-end walkthrough
+data/toy_frogs/           toy dataset: 70 field recordings of 5 frog species (see its README)
 echotrain/                the training code
   options.py              every config option with its default value
   data.py                 reading folders / manifests, class list, genus mapping
@@ -78,6 +87,31 @@ line with `uv.lock`.
 
 The first run downloads the pre-trained weights: ImageNet for EfficientNet (via `timm`), AudioSet for PaSST.
 The Perch v2 weights are in `checkpoints/`.
+
+### Tutorial
+
+`notebooks/tutorial_toy_frogs.ipynb` goes through every step on
+`data/toy_frogs`: 70 full field recordings of 5 frog species (8 training
+recordings per species), cut into chunks, used to train and compare two
+models. It runs in a few minutes on a GPU. It needs a few extra packages (Jupyter, UMAP), kept in
+their own dependency group:
+
+```bash
+uv sync --group notebook
+uv run --group notebook jupyter lab notebooks/tutorial_toy_frogs.ipynb
+```
+
+To do the same without the notebook (cut the recordings into chunks, train,
+evaluate on the test set):
+
+```bash
+for s in train val test; do
+  uv run tools/prepare_chunks.py --input-dir data/toy_frogs/recordings/$s --split $s \
+    --output-dir data/toy_frogs_chunks/$s --output-manifest data/toy_frogs_chunks/$s.csv --chunk-seconds 5
+done
+uv run train.py --config configs/toy_frogs.yaml
+uv run evaluate.py --run runs/toy_frogs --dir data/toy_frogs_chunks/test
+```
 
 ## 2. Prepare the data
 

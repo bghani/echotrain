@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .ruff_cache/
 .venv/
+.ipynb_checkpoints/
+data/toy_frogs_chunks/
