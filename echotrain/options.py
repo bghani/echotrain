@@ -44,7 +44,8 @@ DEFAULTS = {
         "backbone": "efficientnet_b3",  # effnet_* models: any timm EfficientNet, e.g. efficientnet_b0 ... b5,
                                         # tf_efficientnet_b0 ... b8, tf_efficientnetv2_s
         "pretrained": True,      # ImageNet weights (EfficientNet) / AudioSet weights (PaSST)
-        "perch_weights": None,   # backbone weights for the perch_* models
+        "perch_weights": "checkpoints/perch_v2_backbone_timm.pt",  # backbone weights for the perch_* models;
+                                 # relative paths are tried from the working directory, then the repo root
         "chunk_seconds": 5.0,    # effnet_chunked: each clip is cut into chunks of this length
         "chunk_aggregation": "max",
         "init_checkpoint": None, # warm start: load matching weights from an earlier run

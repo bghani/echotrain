@@ -16,7 +16,8 @@ import torch
 from . import networks
 from .frontend import PasstFrontend, PerchFrontend
 
-LEGACY_DIR = Path(__file__).resolve().parent.parent / "legacy"
+REPO_DIR = Path(__file__).resolve().parent.parent
+LEGACY_DIR = REPO_DIR / "legacy"
 
 
 def _legacy_models():
@@ -91,9 +92,16 @@ def _passt(m, cfg, n_species, n_genus):
 
 
 def _perch_weights(cfg):
-    if not cfg["model"]["perch_weights"]:
+    path = cfg["model"]["perch_weights"]
+    if not path:
         print("WARNING: model.perch_weights is not set; the Perch backbone starts from random weights.")
-    return cfg["model"]["perch_weights"]
+        return None
+    path = Path(path)
+    if not path.is_absolute() and not path.exists() and (REPO_DIR / path).exists():
+        path = REPO_DIR / path
+    if not path.exists():
+        raise FileNotFoundError(f"model.perch_weights not found: {cfg['model']['perch_weights']}")
+    return str(path)
 
 
 # name: (builder, two_heads, needs_legacy, description)

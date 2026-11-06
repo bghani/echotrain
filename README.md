@@ -281,6 +281,10 @@ In this table "species" means the class head and "genus" the parent-group head.
 Models with a genus head need `taxonomy.genus_head: true`; the `*_single`
 models need it to be `false`.
 
+**Perch weights.** The `perch_*` models load their backbone from
+`model.perch_weights`, by default `checkpoints/perch_v2_backbone_timm.pt`,
+which ships with the repository. Set it to `null` to start from random weights.
+
 **EfficientNet size.** The `effnet*` models take their backbone from
 `model.backbone` (default `efficientnet_b3`). Any EfficientNet in `timm`
 works, e.g. `efficientnet_b0` to `efficientnet_b5`, `tf_efficientnet_b0` to
