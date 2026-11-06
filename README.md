@@ -82,59 +82,105 @@ The Perch v2 weights are in `checkpoints/`.
 ## 2. Prepare the data
 
 The model trains on clips of a fixed length (`audio.clip_seconds`, 20 s for
-bats). Clips that are longer are cropped and shorter ones are repeated
-(tiled) to fill the length. Long recordings should first be cut into chunks
-so that nothing is thrown away. In evaluation, the chunks of one recording are
-max-pooled into a single prediction.
+bats). A file that is longer is cropped, so the rest of it is never seen; a
+file that is shorter is repeated (tiled) to fill the length. The training data
+should therefore already be cut into chunks of about `audio.clip_seconds`. If
+your recordings are whole (longer files), cut them first, see
+[Cutting whole recordings into chunks](#cutting-whole-recordings-into-chunks).
 
-There are two ways to describe a dataset, set with `data.mode`. Both train
-the same way; only the `data:` section of the config differs. Start from the
-matching example config:
+There are two ways to describe a dataset of chunks, set with `data.mode`. Both
+train the same way; only the `data:` section of the config differs. Start
+from the matching example config:
 
 | `data.mode` | your data | example config |
 |---|---|---|
 | `folders` | one folder per class (species, call type, ...), separate `train/` and `val/` folders | `configs/example_folders.yaml` |
 | `manifest` | one CSV listing every file with its label and split | `configs/example_manifest.yaml` |
 
+In evaluation, the chunks of one recording are max-pooled into a single
+prediction, so scores are per recording, not per chunk. How the recording of
+a chunk is found is explained under each option.
+
 ### Option A: class folders
 
 ```
-train/Myotis_myotis/rec1.wav
-train/Myotis_myotis/rec2.wav
-train/Nyctalus_noctula/rec3.wav
-val/Myotis_myotis/rec4.wav
+train/Myotis_myotis/rec1_chunk000.wav
+train/Myotis_myotis/rec1_chunk001.wav
+train/Nyctalus_noctula/rec3_chunk000.wav
+val/Myotis_myotis/rec4_chunk000.wav
 ...
 ```
 
 Folder names are the class names. Set `data.mode: folders`, `data.train_dir`
-and `data.val_dir` (see `configs/example_folders.yaml`). To cut the files into
-chunks first:
+and `data.val_dir` (see `configs/example_folders.yaml`). The recording of a
+chunk is its file name with the `_chunk003` / `_3` suffix removed
+(`eval.group_regex`), taken per class folder: `Myotis_myotis/rec1_chunk000.wav`
+and `Myotis_myotis/rec1_chunk001.wav` are pooled as `Myotis_myotis/rec1`.
+
+### Option B: a manifest CSV
+
+One row per chunk with at least three columns: the file path, the label and
+the split (`train` / `val` / `test`). Set `data.mode: manifest`,
+`data.manifest` and `data.audio_root` (see `configs/example_manifest.yaml`).
+Column names are set in the config (`path_col`, `label_col`, `split_col`).
+Paths can be absolute or relative to `data.audio_root`. Labels may contain
+spaces ("Myotis myotis"); they are turned into `Myotis_myotis`.
+
+Set `data.group_col` to a column that names the source recording of each
+chunk (for the bats: `file_path`); chunks with the same value are pooled in
+evaluation. Without it, the recording is guessed from the file name as in
+Option A.
+
+To add a background-noise class (files in `noise/train`, `noise/val`, `noise/test`):
+
+```bash
+uv run tools/add_noise_to_manifest.py --manifest manifest_chunks.csv \
+    --noise-dir /data/shared/data/noise --audio-root /data/shared/data --output manifest_with_noise.csv
+```
+
+### Cutting whole recordings into chunks
+
+`tools/prepare_chunks.py` cuts every recording into chunks of `--chunk-seconds`
+(default 20; use the same value as `audio.clip_seconds`). It reads either
+class folders (`--input-dir`) or a manifest of recordings (`--manifest`), and
+writes two things:
+
+1. **Chunk files** in `--output-dir`: mono `.wav` at `--target-sr` (default
+   32000, the same as `audio.sample_rate`), named `<recording>_chunk000.wav`,
+   `<recording>_chunk001.wav`, ..., in one subfolder per class (or all in one
+   folder with `--flat`). A last piece shorter than one chunk is tiled to full
+   length if it is at least `--min-chunk-seconds` (default 2) long, and dropped
+   otherwise. A recording shorter than one chunk always gives one tiled chunk.
+2. **A manifest CSV** (`--output-manifest`): one row per chunk, with every
+   column of the input plus `chunk_path`, the chunk's path relative to the
+   parent folder of `--output-dir`. For folder input the columns are
+   `file_path` (the source recording), `latin` (the class), `split` (from
+   `--split`) and `chunk_path`.
+
+Which option the output feeds:
+
+| input | use with | how |
+|---|---|---|
+| class folders (`--input-dir`) | **Option A** | the `--output-dir` is a class-folder tree: use it as `data.train_dir` / `data.val_dir`. The CSV is not needed. |
+| a manifest of recordings (`--manifest`) | **Option B** | use the CSV as `data.manifest`, with `data.audio_root` = parent of `--output-dir`, `path_col: chunk_path` and `group_col: file_path`. The chunk folders alone are not enough, because they are not split into train and val. |
+
+**From class folders (Option A).** Run it once per split:
 
 ```bash
 uv run tools/prepare_chunks.py --input-dir /data/frogs/train --split train \
     --output-dir /data/frogs/chunks/train --output-manifest /data/frogs/chunks/train.csv --chunk-seconds 5
+uv run tools/prepare_chunks.py --input-dir /data/frogs/val --split val \
+    --output-dir /data/frogs/chunks/val --output-manifest /data/frogs/chunks/val.csv --chunk-seconds 5
 ```
 
-The chunks keep the class folder structure, so `/data/frogs/chunks/train`
-can be used directly as `data.train_dir`.
+Then set `data.train_dir: /data/frogs/chunks/train` and
+`data.val_dir: /data/frogs/chunks/val` (with `audio.clip_seconds: 5`).
 
-### Option B: a manifest CSV
-
-One row per audio file with at least three columns: the file path, the label
-and the split (`train` / `val` / `test`). Set `data.mode: manifest`,
-`data.manifest` and `data.audio_root` (see `configs/example_manifest.yaml`). Column names are set in the config
-(`path_col`, `label_col`, `split_col`). Paths can be absolute or relative to
-`data.audio_root`. Labels may contain spaces ("Myotis myotis"); they are
-turned into `Myotis_myotis`.
-
-If the files are chunks, also set `data.group_col` to a column that names the
-source recording (for the bats: `file_path`). Chunks of one recording are then
-pooled in evaluation. Without it, the recording is guessed from the file name
-by removing a `_chunk003` / `_3` suffix (`eval.group_regex`).
-
-To make chunks from a manifest of full recordings (this is how the bat data
-was made; the `tef` column marks real-time ultrasound recordings that need
-10x time expansion):
+**From a manifest of recordings (Option B).** This is how the bat data was
+made. The `tef` column marks real-time ultrasound recordings (`tef == 1`),
+which are time-expanded 10x before resampling, the way a bat detector does
+it, so that the calls fall into the audible range; rows with `tef == 10` are
+already expanded. In folder mode, `--expand-all` expands every file.
 
 ```bash
 uv run tools/prepare_chunks.py --manifest recordings.csv --audio-root /data/shared \
@@ -142,12 +188,10 @@ uv run tools/prepare_chunks.py --manifest recordings.csv --audio-root /data/shar
     --time-expansion-col tef --flat
 ```
 
-To add a background-noise class (files in `noise/train`, `noise/val`, `noise/test`):
-
-```bash
-uv run tools/add_noise_to_manifest.py --manifest manifest_chunks_new.csv \
-    --noise-dir /data/shared/data/noise --audio-root /data/shared/data --output manifest_with_noise.csv
-```
+Then set `data.manifest: manifest_chunks_new.csv`,
+`data.audio_root: /data/shared/data`, `data.path_col: chunk_path` and
+`data.group_col: file_path`. The `split` column of `recordings.csv` is kept,
+so every chunk stays in the split of its recording.
 
 ### Which classes are trained
 
