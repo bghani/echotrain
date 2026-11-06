@@ -6,6 +6,8 @@
 #   recs/XC456_chunk000.wav,Nyctalus noctula,val,recs/XC456.wav
 #   ...
 #
+# label_col can hold any kind of class -- species, call type, song type,
+# dialect, life stage, ... -- see "Not only species" in the README.
 # The column names are set below (path_col, label_col, split_col, group_col).
 # Paths are relative to audio_root (absolute paths are used as-is). Labels
 # with spaces become underscores ("Myotis myotis" -> "Myotis_myotis").
@@ -30,14 +32,14 @@ data:
   group_col: file_path            # source recording of each chunk; its chunks are pooled in evaluation
   train_splits: [train]
   val_splits: [val]               # keep "test" for the final evaluate.py run
-  # species_list: inputs/my_species.txt   # optional: only train on these classes (one name per line)
+  # species_list: inputs/my_classes.txt   # optional: only train on these classes (one name per line)
 
 audio:
   sample_rate: 32000
   clip_seconds: 5
 
 taxonomy:
-  genus_head: true                # genus = first word of the label; false for a species head only
+  genus_head: true                # parent group = first word of the label (the genus for species), or set genus_map; false = class head only
   # genus_map: inputs/my_species_genus_map.csv   # optional CSV with columns species,genus
 
 model:

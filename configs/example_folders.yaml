@@ -1,4 +1,6 @@
-# Example config for data.mode: folders -- one folder per species.
+# Example config for data.mode: folders -- one folder per class.
+# Classes can be species (as below), call types, song types, dialects, life
+# stages, ... -- see "Not only species" in the README.
 #
 #   /path/to/train/Bufo_bufo/*.wav
 #   /path/to/train/Rana_temporaria/*.wav
@@ -22,14 +24,14 @@ data:
   mode: folders
   train_dir: /path/to/train
   val_dir: /path/to/val
-  # species_list: inputs/my_species.txt   # optional: only train on these classes (one name per line)
+  # species_list: inputs/my_classes.txt   # optional: only train on these classes (one name per line)
 
 audio:
   sample_rate: 32000
   clip_seconds: 5
 
 taxonomy:
-  genus_head: true         # genus = first word of the folder name; false for a species head only
+  genus_head: true         # parent group = first word of the folder name (the genus for species), or set genus_map; false = class head only
   # genus_map: inputs/my_species_genus_map.csv   # optional CSV with columns species,genus
 
 model:

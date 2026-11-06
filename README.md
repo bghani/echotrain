@@ -1,14 +1,23 @@
 # echo_train
 
-Train a sound classifier for any species group (bats, birds, frogs, insects, ...)
-from labelled audio clips. The model takes raw waveforms, computes a log-mel
-spectrogram on the GPU, and predicts which species are present (multi-label,
-one sigmoid per class). Optionally, a second head predicts the genus.
+Train a sound classifier from labelled audio clips. The labels can be
+anything you can hear: species (bats, birds, frogs, insects, ...), but equally
+call types, song types, dialects, individuals, life stages, sexes or
+behaviours. The model takes raw waveforms, computes a log-mel spectrogram on
+the GPU, and predicts which classes are present (multi-label, one sigmoid per
+class). Optionally, a second head predicts a coarser parent group of each
+class (for species: the genus).
+
+> **About the names.** The code grew out of species classification, so some
+> option names say `species` and `genus`. Read them as *class* and *parent
+> group*: `data.species_list` is the list of classes, and the "genus" head
+> predicts whatever grouping `taxonomy.genus_map` defines. See
+> [Not only species](#not-only-species) below.
 
 ```
 train.py                  train a model from a config file
 evaluate.py               score a trained model on another split (e.g. test)
-configs/example_folders.yaml   example config for a dataset stored as species folders
+configs/example_folders.yaml   example config for a dataset stored as one folder per class
 configs/example_manifest.yaml  example config for a dataset described by a manifest CSV
 configs/bats.yaml         the European bat setup (manifest dataset, species + genus)
 echotrain/                the training code
@@ -67,10 +76,10 @@ matching example config:
 
 | `data.mode` | your data | example config |
 |---|---|---|
-| `folders` | one folder per species, separate `train/` and `val/` folders | `configs/example_folders.yaml` |
+| `folders` | one folder per class (species, call type, ...), separate `train/` and `val/` folders | `configs/example_folders.yaml` |
 | `manifest` | one CSV listing every file with its label and split | `configs/example_manifest.yaml` |
 
-### Option A: species folders
+### Option A: class folders
 
 ```
 train/Myotis_myotis/rec1.wav
@@ -89,7 +98,7 @@ uv run tools/prepare_chunks.py --input-dir /data/frogs/train --split train \
     --output-dir /data/frogs/chunks/train --output-manifest /data/frogs/chunks/train.csv --chunk-seconds 5
 ```
 
-The chunks keep the species folder structure, so `/data/frogs/chunks/train`
+The chunks keep the class folder structure, so `/data/frogs/chunks/train`
 can be used directly as `data.train_dir`.
 
 ### Option B: a manifest CSV
@@ -131,9 +140,43 @@ classes are then ignored, and the run prints how many were skipped. Classes
 are always sorted alphabetically; that order is the model's output order and
 is saved in `labels.json`.
 
-### Genus head (optional)
+### Not only species
 
-With `taxonomy.genus_head: true`, the model also learns the genus. By default
+Nothing in the training depends on the labels being species. A class is just
+a folder name (folders mode) or a value of `data.label_col` (manifest mode),
+so the same setup trains, for example:
+
+| task | classes (folder names or label values) | parent group for the second head |
+|---|---|---|
+| species | `Myotis_myotis`, `Nyctalus_noctula` | genus (`Myotis`, `Nyctalus`) |
+| call types | `Pipistrellus_pipistrellus_social`, `Pipistrellus_pipistrellus_echolocation` | species |
+| song types / dialects | `dialect_north`, `dialect_south` | region, or none |
+| life stages | `Rana_temporaria_tadpole`, `Rana_temporaria_adult` | species |
+| individuals | `bird_017`, `bird_042` | colony or population, or none |
+
+In manifest mode one CSV can hold several label columns (`latin`,
+`call_type`, `dialect`, ...); point `data.label_col` at the one to train on.
+
+Two things to set for non-species labels:
+
+- **Parent group.** By default the second head's group is the class name up
+  to the first `_`, which is the genus for `Genus_species` names but usually
+  wrong for anything else (`dialect_north` -> `dialect`). Either turn it off
+  (`taxonomy.genus_head: false` with a `*_single` model) or give
+  `taxonomy.genus_map` with the grouping you want (the CSV header stays
+  `species,genus`; the values are your classes and their groups).
+- **Recordings with several classes.** In evaluation, the chunks of one
+  recording are max-pooled into one prediction, and their labels are merged
+  the same way. A recording with chunks of two call types is then scored as
+  "contains both". In folders mode, chunks are grouped per class and
+  recording, so each class of a recording is scored separately. To score
+  every chunk on its own instead (manifest mode), set `data.group_col` to the
+  same column as `data.path_col`.
+
+### Parent-group (genus) head (optional)
+
+With `taxonomy.genus_head: true`, the model also learns the genus, or any
+other parent group of the classes. By default
 the genus is the first word of the class name (`Myotis_myotis` -> `Myotis`),
 and a one-word class such as `noise` is its own genus. For anything else,
 give `taxonomy.genus_map`: a CSV with columns `species,genus`. The "genus" can
@@ -207,6 +250,8 @@ the backbone is reused and the output heads start fresh.
 ## 4. Models
 
 Set `model.name` to one of:
+
+In this table "species" means the class head and "genus" the parent-group head.
 
 | name | heads | description |
 |---|---|---|
