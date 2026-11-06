@@ -138,7 +138,7 @@ uv run tools/add_noise_to_manifest.py --manifest manifest_chunks.csv \
     --noise-dir /data/shared/data/noise --audio-root /data/shared/data --output manifest_with_noise.csv
 ```
 
-### Cutting whole recordings into chunks
+### Cutting whole recordings into chunks (if dataset is not chunked already)
 
 `tools/prepare_chunks.py` cuts every recording into chunks of `--chunk-seconds`
 (default 20; use the same value as `audio.clip_seconds`). It reads either
