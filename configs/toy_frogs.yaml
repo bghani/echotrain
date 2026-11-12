@@ -10,7 +10,7 @@
 
 run_name: toy_frogs
 output_dir: runs
-device: cuda:0             # falls back to the CPU if there is no GPU
+device: cuda:0             # else an Apple Silicon GPU (mps), else the CPU
 
 data:
   mode: folders            # one subfolder per species

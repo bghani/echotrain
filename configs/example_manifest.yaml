@@ -20,7 +20,7 @@
 
 run_name: my_species_group
 output_dir: runs
-device: cuda:0
+device: cuda:0             # else an Apple Silicon GPU (mps), else the CPU
 
 data:
   mode: manifest

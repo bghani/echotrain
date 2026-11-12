@@ -10,7 +10,7 @@ DEFAULTS = {
     "run_name": "run",
     "output_dir": "runs",
     "seed": 78,
-    "device": "cuda:0",
+    "device": "cuda:0",          # falls back to mps (Apple Silicon), then cpu; see echotrain/device.py
     "data": {
         # "folders": train_dir/<species>/*.wav and val_dir/<species>/*.wav
         # "manifest": one CSV with a row per audio file (path, label, split)

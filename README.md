@@ -33,6 +33,17 @@ uv sync                                            # creates .venv/ with the exa
 Put `uv run` in front of every command (`uv run train.py ...`); there is
 nothing to activate. Run `uv sync` again after pulling changes.
 
+On Windows, install uv with
+`powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`.
+
+**GPU.** Training uses the first GPU it finds, else the CPU (`device` in the config):
+
+| Machine | GPU used | Notes |
+|---|---|---|
+| Linux or Windows with an NVIDIA GPU | CUDA | `uv sync` installs the CUDA 12.1 build of PyTorch; needs an NVIDIA driver >= 525 |
+| Mac with Apple Silicon (M1–M4) | MPS | no mixed precision; if an operation is missing on MPS, set `PYTORCH_ENABLE_MPS_FALLBACK=1` |
+| anything else | CPU | works, but slowly |
+
 ### Quick start: the tutorial
 
 `notebooks/tutorial_toy_frogs.ipynb` runs the whole workflow on a small frog

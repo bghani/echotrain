@@ -24,6 +24,7 @@ import torch
 
 from echotrain.data import LabelSpace, build_label_space, describe, encode, read_split
 from echotrain.dataset import AudioDataset
+from echotrain.device import pick_device
 from echotrain.engine import evaluate, save_reports, train_one_epoch
 from echotrain.model_zoo import build_model
 from echotrain.options import load_config, save_config
@@ -42,7 +43,7 @@ def worker_init(worker_id):
     np.random.seed((torch.initial_seed() + worker_id) % 2**32)
 
 
-def make_loaders(cfg, train_split, val_split, label_space):
+def make_loaders(cfg, train_split, val_split, label_space, pin_memory=True):
     n_sp = len(label_space.species)
     n_g = len(label_space.genus) if label_space.has_genus else 0
     train_set = AudioDataset(train_split, n_sp, n_g, cfg, train=True)
@@ -54,11 +55,11 @@ def make_loaders(cfg, train_split, val_split, label_space):
     t, e = cfg["train"], cfg["eval"]
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=t["batch_size"], sampler=sampler, shuffle=sampler is None,
-        num_workers=t["num_workers"], pin_memory=True, drop_last=True, worker_init_fn=worker_init,
+        num_workers=t["num_workers"], pin_memory=pin_memory, drop_last=True, worker_init_fn=worker_init,
         persistent_workers=t["num_workers"] > 0)
     val_loader = torch.utils.data.DataLoader(
         val_set, batch_size=e["batch_size"], shuffle=False, num_workers=e["num_workers"],
-        pin_memory=True, persistent_workers=e["num_workers"] > 0)
+        pin_memory=pin_memory, persistent_workers=e["num_workers"] > 0)
     return train_loader, val_loader
 
 
@@ -90,7 +91,7 @@ def main():
         p.error("give --config or --resume")
 
     seed_everything(cfg["seed"])
-    device = torch.device(cfg["device"] if torch.cuda.is_available() else "cpu")
+    device = pick_device(cfg["device"])
     print(f"Run directory: {run_dir}  |  device: {device}")
 
     # ---- data -------------------------------------------------------------
@@ -114,7 +115,8 @@ def main():
     save_config(cfg, run_dir / "config.yaml")
     label_space.save(run_dir / "labels.json")
 
-    train_loader, val_loader = make_loaders(cfg, train_split, val_split, label_space)
+    train_loader, val_loader = make_loaders(cfg, train_split, val_split, label_space,
+                                            pin_memory=device.type == "cuda")
 
     # ---- model and optimisation --------------------------------------------
     model = build_model(cfg, label_space).to(device)

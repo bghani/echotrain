@@ -16,6 +16,7 @@ import torch
 
 from echotrain.data import LabelSpace, describe, encode, read_split
 from echotrain.dataset import AudioDataset
+from echotrain.device import pick_device
 from echotrain.engine import evaluate, save_reports
 from echotrain.model_zoo import build_model
 from echotrain.options import load_config
@@ -45,7 +46,7 @@ def main():
     split = encode(split, label_space, name)
     describe(split, name)
 
-    device = torch.device(cfg["device"] if torch.cuda.is_available() else "cpu")
+    device = pick_device(cfg["device"])
     model = build_model(cfg, label_space)
     model.load_state_dict(torch.load(args.checkpoint or run / "best_model.pt", map_location="cpu", weights_only=True))
     model.to(device)

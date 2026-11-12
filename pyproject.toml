@@ -36,12 +36,13 @@ notebook = [
 # This is an application run from the repo root, not a library to install.
 package = false
 
-# On Linux, take PyTorch builds for CUDA 12.1 (runs on NVIDIA drivers >= 525).
+# On Linux and Windows, take PyTorch builds for CUDA 12.1 (runs on NVIDIA drivers >= 525;
+# without an NVIDIA GPU they fall back to the CPU). The PyPI wheels for Windows are CPU-only.
 # On macOS, the regular PyPI wheels (CPU / Apple MPS) are used.
 [tool.uv.sources]
-torch = [{ index = "pytorch-cu121", marker = "sys_platform == 'linux'" }]
-torchaudio = [{ index = "pytorch-cu121", marker = "sys_platform == 'linux'" }]
-torchvision = [{ index = "pytorch-cu121", marker = "sys_platform == 'linux'" }]
+torch = [{ index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" }]
+torchaudio = [{ index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" }]
+torchvision = [{ index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" }]
 
 [[tool.uv.index]]
 name = "pytorch-cu121"

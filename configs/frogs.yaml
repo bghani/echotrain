@@ -3,7 +3,7 @@
 
 run_name: frogs_
 output_dir: runs
-device: cuda:0
+device: cuda:0             # else an Apple Silicon GPU (mps), else the CPU
 
 data:
   mode: folders
